@@ -104,9 +104,18 @@ signature.
 The static provider admits regular input files up to 128 MiB before retaining
 their bytes. Reads remain bounded if a file grows after admission. Metadata,
 CIL decoding, and projected inspection records have a separate conservative
-64 MiB representation budget; shared heap strings are cached, but repeated
-output occurrences still consume that budget. These are inspection resource
-policies, not PE format limits or a hard bound on total V8 heap use.
+representation budget per inspection. By default its byte capacity is Node's
+actual V8 heap limit (`v8.getHeapStatistics().heap_size_limit`), so changing
+Node's `--max-old-space-size` also changes this default. Set
+`REA_MANAGED_DECODE_BUDGET_BYTES` to a positive decimal safe integer in bytes
+to select an explicit capacity; invalid supplied values fail configuration
+validation. CLI inspection, path comparison, and MCP inspection use the same
+setting. Shared heap strings are cached, but repeated output occurrences still
+consume the budget. The capacity is accounting for decoded representations,
+not a measurement or reservation of available memory. Concurrent inspections,
+retained comparison results, other allocations, and JSON validation can use
+additional heap; this guard does not guarantee that Node cannot run out of
+memory. These are inspection resource policies, not PE format limits.
 
 Path-based member comparison uses the same per-input snapshot policy and
 inspects its two selected paths sequentially, retaining each inspection rather

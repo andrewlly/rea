@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { inspectManagedMembersBytes } from "./ManagedMemberInspector.js";
 import {
+  attachManagedDecodeBudget,
   ManagedDecodeBudget,
   managedDecodeBudget,
 } from "./ManagedDecodeBudget.js";
@@ -698,6 +699,10 @@ describe("managed user strings", () => {
   it("admits ldstr tokens before collecting them", () => {
     const layout = { userStrings: null } as unknown as ManagedMetadataLayout;
     // Leave 1 KiB of the 64 MiB budget: too little for 100 distinct tokens.
+    attachManagedDecodeBudget(
+      layout,
+      new ManagedDecodeBudget(64 * 1024 * 1024),
+    );
     managedDecodeBudget(layout).reserve(64 * 1024 * 1024 - 1024, null);
     const method = {
       body: {
@@ -881,6 +886,10 @@ describe("managed user string issues", () => {
       userStrings: { name: "#US", offset: 0, size: heap.length },
     } as unknown as ManagedMetadataLayout;
     // Leave 24 KiB: enough for the failures, not for 512 bytes leaked each.
+    attachManagedDecodeBudget(
+      layout,
+      new ManagedDecodeBudget(64 * 1024 * 1024),
+    );
     managedDecodeBudget(layout).reserve(64 * 1024 * 1024 - 24 * 1024, null);
     const method = {
       body: {
@@ -1102,6 +1111,7 @@ describe("managed member decoding budget", () => {
     const result = inspectManagedMembersBytes(
       bytes,
       managedPeFixtureTarget(bytes),
+      { capacityBytes: 64 * 1024 * 1024 },
     );
 
     expect(result.coverage).toMatchObject({
@@ -1132,6 +1142,7 @@ describe("managed member decoding budget", () => {
     const result = inspectManagedMembersBytes(
       bytes,
       managedPeFixtureTarget(bytes),
+      { capacityBytes: 64 * 1024 * 1024 },
     );
 
     expect(result.coverage.state).not.toBe("unavailable");
@@ -1158,6 +1169,7 @@ describe("managed member decoding budget", () => {
     const result = inspectManagedMembersBytes(
       bytes,
       managedPeFixtureTarget(bytes),
+      { capacityBytes: 64 * 1024 * 1024 },
     );
 
     expect(result.coverage).toMatchObject({
@@ -1182,9 +1194,9 @@ describe("managed derived edges", () => {
       body: { anchors: Array.from({ length: 40_000 }, () => anchor) },
     } as unknown as ManagedMethod;
 
-    expect(() => edges([method], new Map(), new ManagedDecodeBudget())).toThrow(
-      ManagedReaderFailure,
-    );
+    expect(() =>
+      edges([method], new Map(), new ManagedDecodeBudget(64 * 1024 * 1024)),
+    ).toThrow(ManagedReaderFailure);
   });
 });
 
@@ -1216,9 +1228,9 @@ describe("managed derived caller names", () => {
       },
     } as unknown as ManagedMethod;
 
-    expect(() => edges([method], new Map(), new ManagedDecodeBudget())).toThrow(
-      ManagedReaderFailure,
-    );
+    expect(() =>
+      edges([method], new Map(), new ManagedDecodeBudget(64 * 1024 * 1024)),
+    ).toThrow(ManagedReaderFailure);
     expect(built).toBe(false);
   });
 });

@@ -8,6 +8,84 @@ import { createTestTempDirectory } from "../fixtures/temporaryDirectory.js";
 import { cliTest } from "../support/cli/cliFixture.js";
 
 cliTest(
+  "managed CLI applies caller-selected decode capacity to inspection and path comparison",
+  async ({ cli }) => {
+    const directory = await createTestTempDirectory("rea-managed-cli-budget-");
+    const path = join(directory, "fixture.dll");
+    await writeFile(path, buildManagedPeFixture());
+    const environment = {
+      REA_MANAGED_DECODE_BUDGET_BYTES: "16",
+      REA_ANALYSIS_PROVIDER: "invalid-native-selector",
+    };
+    for (const command of [
+      "inspect-managed-artifact",
+      "inspect-managed-members",
+      "inspect-managed-native-boundaries",
+    ]) {
+      const result = await cli.run({
+        arguments: [command, path, "--json"],
+        environment,
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.json).toMatchObject({
+        normalized_result: {
+          coverage: {
+            issues: [
+              {
+                code: "resource-limit",
+                detail:
+                  "Managed metadata exceeds the 16 byte representation budget",
+              },
+            ],
+          },
+        },
+      });
+    }
+    const comparison = await cli.run({
+      arguments: ["compare-managed-members", path, path, "--json"],
+      environment,
+    });
+    expect(comparison.exitCode).toBe(0);
+    expect(comparison.json).toMatchObject({
+      normalized_result: {
+        left: { metadata_status: "partial" },
+        right: { metadata_status: "partial" },
+        coverage: {
+          status: "partial",
+          left_status: "unavailable",
+          right_status: "unavailable",
+        },
+      },
+    });
+  },
+);
+
+cliTest(
+  "managed CLI rejects invalid capacity before opening missing inputs",
+  async ({ cli }) => {
+    for (const arguments_ of [
+      ["inspect-managed-members", "missing.dll", "--json"],
+      [
+        "compare-managed-members",
+        "missing-left.dll",
+        "missing-right.dll",
+        "--json",
+      ],
+    ]) {
+      const result = await cli.run({
+        arguments: arguments_,
+        environment: { REA_MANAGED_DECODE_BUDGET_BYTES: "0" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.json).toMatchObject({
+        code: "configuration_invalid",
+        details: { settings: [{ setting: "REA_MANAGED_DECODE_BUDGET_BYTES" }] },
+      });
+    }
+  },
+);
+
+cliTest(
   "managed CLI retains metadata and CIL after repeated local constructor owner lookups",
   async ({ cli }) => {
     const root = await createTestTempDirectory("rea-managed-row-lookup-");

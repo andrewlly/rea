@@ -23,7 +23,7 @@ const pointerFixture = () => {
   );
   // A fresh owner lets the test set exact remaining capacity independently of
   // the metadata version/string admission already exercised by the parser.
-  const budget = new ManagedDecodeBudget();
+  const budget = new ManagedDecodeBudget(representationCapacity);
   attachManagedDecodeBudget(layout, budget);
   const indexBytes =
     ((layout.table(6)?.rowCount ?? 0) + 1) * Uint32Array.BYTES_PER_ELEMENT +

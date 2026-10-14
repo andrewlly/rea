@@ -2,6 +2,7 @@ import type { AppConfig } from "../config/types.js";
 import type { parseConfig } from "../config/parseConfig.js";
 import type { Logger } from "pino";
 import type { BinarySession } from "./binary/BinarySession.js";
+import type { parseManagedDecodeBudget } from "../config/managedDecodeBudget.js";
 
 /** Configuration and one-shot session factories supplied by the production boundary. */
 export interface DirectAnalysisDependencies {
@@ -11,7 +12,10 @@ export interface DirectAnalysisDependencies {
     config: AppConfig,
     logger: Logger,
   ) => BinarySession | Promise<BinarySession>;
-  readonly createManagedBinarySession: () =>
-    | BinarySession
-    | Promise<BinarySession>;
+  readonly readManagedDecodeBudget?: () => ReturnType<
+    typeof parseManagedDecodeBudget
+  >;
+  readonly createManagedBinarySession: (
+    capacityBytes?: number,
+  ) => BinarySession | Promise<BinarySession>;
 }

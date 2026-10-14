@@ -13,7 +13,7 @@ import { AnalysisInputError } from "../domain/analysisErrorCore.js";
 import { err, ok } from "../domain/result.js";
 import type { Logger } from "pino";
 import { registerEvidenceTools } from "./registerEvidenceTools.js";
-import { runManagedProviderExecution } from "../composition/directAnalysis.js";
+import { createManagedProviderExecution } from "../composition/directAnalysis.js";
 import { isManagedToolName } from "../contracts/managed/managedToolContracts.js";
 
 /** Register execution-free managed PE/CLI inspection. */
@@ -21,12 +21,16 @@ export const registerManagedTools = (
   server: EvidenceMcpServer,
   options: {
     readonly logger: Logger;
+    readonly environment?: Readonly<NodeJS.ProcessEnv>;
     readonly activeTarget: (() => BinaryTarget | undefined) | undefined;
     readonly recordEvidence: EvidenceWriter["recordEvidence"] | undefined;
     readonly evidenceById?: EvidenceLookup | undefined;
     readonly withAdmittedAnalysis: import("./analysisAdmission.js").WithAdmittedAnalysis;
   },
 ): void => {
+  const runManagedProviderExecution = createManagedProviderExecution(
+    options.environment ?? {},
+  );
   let selectedManagedPath: string | undefined;
   const analysisForAdmission = (
     analysis: AnalysisOperationPort,

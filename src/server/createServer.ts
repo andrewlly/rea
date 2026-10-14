@@ -795,6 +795,7 @@ const registerBinaryAnalysisTools = ({
   recordEvidenceWithUnknown,
   evidenceById,
   withAdmittedAnalysis,
+  environment,
 }: ServerToolContext): void => {
   const recordUnknown =
     session === undefined
@@ -830,7 +831,11 @@ const registerBinaryAnalysisTools = ({
   };
   registerNativeTools(server, { ...evidenceOptions, evidenceById });
   registerArtifactTools(server, { ...evidenceOptions, evidenceById });
-  registerManagedTools(server, { ...evidenceOptions, evidenceById });
+  registerManagedTools(server, {
+    ...evidenceOptions,
+    evidenceById,
+    environment,
+  });
   if (session !== undefined)
     registerManagedWorkflowTools(server, {
       logger,

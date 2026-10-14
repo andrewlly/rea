@@ -1,5 +1,6 @@
 import { snapshotEnvironment } from "../process/snapshotEnvironment.js";
 import { parseConfig } from "../config/parseConfig.js";
+import { parseManagedDecodeBudget } from "../config/managedDecodeBudget.js";
 import type { DirectAnalysisDependencies } from "../application/DirectAnalysisDependencies.js";
 
 type DirectAnalysisRuntime = typeof import("../application/DirectAnalysis.js");
@@ -18,15 +19,19 @@ export const createDirectAnalysis = (
   selectedEnvironment: Readonly<Record<string, string | undefined>>,
 ) => {
   const environment = snapshotEnvironment(selectedEnvironment);
+  const managedBudget = parseManagedDecodeBudget(
+    environment.REA_MANAGED_DECODE_BUDGET_BYTES,
+  );
   const dependencies: DirectAnalysisDependencies = {
     readConfiguration: () => parseConfig(environment),
     createBinarySession: async (config, logger) => {
       const { createBinarySession } = await import("./binary.js");
       return createBinarySession(config, logger, environment);
     },
-    createManagedBinarySession: async () => {
+    readManagedDecodeBudget: () => managedBudget,
+    createManagedBinarySession: async (capacityBytes) => {
       const { createManagedBinarySession } = await import("./binary.js");
-      return createManagedBinarySession();
+      return createManagedBinarySession(capacityBytes);
     },
   };
   const runDirectAnalysis: BoundOperation<
@@ -60,19 +65,25 @@ export const createDirectAnalysis = (
 /** Bound operations used by CLI command registration. */
 export type DirectAnalysis = ReturnType<typeof createDirectAnalysis>;
 
-/** Execute managed metadata without configuration or native provider candidates. */
-export const runManagedProviderExecution: BoundOperation<
-  DirectAnalysisRuntime["runManagedProviderExecution"]
-> = async (...args) => {
-  const { runManagedProviderExecution } =
-    await import("../application/DirectAnalysis.js");
-  return runManagedProviderExecution(
-    {
-      createManagedBinarySession: async () => {
-        const { createManagedBinarySession } = await import("./binary.js");
-        return createManagedBinarySession();
-      },
-    },
-    ...args,
+/** Bind managed-only execution without consulting unrelated native settings. */
+export const createManagedProviderExecution = (
+  selectedEnvironment: Readonly<Record<string, string | undefined>>,
+): BoundOperation<DirectAnalysisRuntime["runManagedProviderExecution"]> => {
+  const budget = parseManagedDecodeBudget(
+    selectedEnvironment.REA_MANAGED_DECODE_BUDGET_BYTES,
   );
+  return async (...args) => {
+    const { runManagedProviderExecution } =
+      await import("../application/DirectAnalysis.js");
+    return runManagedProviderExecution(
+      {
+        readManagedDecodeBudget: () => budget,
+        createManagedBinarySession: async (capacityBytes) => {
+          const { createManagedBinarySession } = await import("./binary.js");
+          return createManagedBinarySession(capacityBytes);
+        },
+      },
+      ...args,
+    );
+  };
 };

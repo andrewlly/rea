@@ -402,6 +402,7 @@ export const readManagedMetadataLayout = (
   artifact: Buffer,
   rootOffset: number,
   size: number,
+  capacityBytes?: number,
 ): ManagedMetadataLayout => {
   if (size < 20 || rootOffset < 0 || rootOffset > artifact.length - size)
     throw managedFailure(
@@ -411,7 +412,7 @@ export const readManagedMetadataLayout = (
       rootOffset,
     );
   const bytes = artifact.subarray(rootOffset, rootOffset + size);
-  const budget = new ManagedDecodeBudget();
+  const budget = new ManagedDecodeBudget(capacityBytes);
   const { streams, version } = readMetadataStreams(bytes, rootOffset, budget);
   const { tableBytes, tablesOffset, heaps, valid } = readTablesHeader(
     artifact,

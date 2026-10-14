@@ -30,14 +30,18 @@ export const createBinarySession = (
       [hopper, ghidra, ida],
       config.analysisProvider,
     ),
-    auxiliaryAnalysisProviderDeclarations(environment).map(
-      (declaration) => new LazyAnalysisProvider(declaration),
-    ),
+    auxiliaryAnalysisProviderDeclarations(
+      environment,
+      process.platform,
+      config.managedDecodeBudgetBytes,
+    ).map((declaration) => new LazyAnalysisProvider(declaration)),
   );
 };
 
 /** Compose an execution-free managed session without native provider selection. */
-export const createManagedBinarySession = (): BinarySession =>
+export const createManagedBinarySession = (
+  capacityBytes?: number,
+): BinarySession =>
   composeBinarySession(new AnalysisProviderRegistry([]), [
-    new ManagedStaticProvider(),
+    new ManagedStaticProvider(capacityBytes),
   ]);

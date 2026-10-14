@@ -48,6 +48,7 @@ import {
 
 /** Execution-free managed PE/CLI auxiliary provider. */
 export class ManagedStaticProvider implements AnalysisProvider {
+  constructor(private readonly capacityBytes?: number) {}
   readonly #capabilities: readonly CapabilityDescriptor[] =
     managedStaticCapabilities();
 
@@ -60,7 +61,7 @@ export class ManagedStaticProvider implements AnalysisProvider {
   }
 
   createClient(target: BinaryTarget): AnalysisClient {
-    return new ManagedStaticClient(target);
+    return new ManagedStaticClient(target, this.capacityBytes);
   }
 }
 
@@ -68,7 +69,10 @@ class ManagedStaticClient implements AnalysisClient {
   #snapshotBytes: Buffer | undefined;
   readonly #resources = new ArtifactResourceScope();
 
-  constructor(private readonly target: BinaryTarget) {}
+  constructor(
+    private readonly target: BinaryTarget,
+    private readonly capacityBytes?: number,
+  ) {}
 
   async execute(
     operation: AnalysisOperation,
@@ -122,6 +126,7 @@ class ManagedStaticClient implements AnalysisClient {
         parameters,
         bytes,
         this.target,
+        this.capacityBytes,
       );
       return ok(
         createAnalysisExecution(result, MANAGED_STATIC_PROVIDER, {
@@ -201,6 +206,7 @@ const inspectManagedOperation = (
   parameters: Readonly<Record<string, JsonValue>>,
   bytes: Buffer,
   target: BinaryTarget,
+  capacityBytes: number | undefined,
 ):
   | ManagedArtifactInspection
   | ManagedMemberInspection
@@ -208,17 +214,16 @@ const inspectManagedOperation = (
   if (operation === "inspect_managed_members") {
     const { type_names: typeNames } =
       managedMembersInputSchema.parse(parameters);
-    return inspectManagedMembersBytes(
-      bytes,
-      target,
-      typeNames === undefined ? {} : { typeNames },
-    );
+    return inspectManagedMembersBytes(bytes, target, {
+      ...(typeNames === undefined ? {} : { typeNames }),
+      ...(capacityBytes === undefined ? {} : { capacityBytes }),
+    });
   }
   managedTargetInputSchema.parse(parameters);
   if (operation === "inspect_managed_artifact") {
-    return inspectManagedArtifactBytes(bytes, target);
+    return inspectManagedArtifactBytes(bytes, target, capacityBytes);
   }
-  return inspectManagedNativeBoundariesBytes(bytes, target);
+  return inspectManagedNativeBoundariesBytes(bytes, target, capacityBytes);
 };
 
 const managedLocations = (

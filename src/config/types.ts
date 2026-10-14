@@ -6,6 +6,7 @@ import type { GhidraLanguageOverride } from "./ghidraLanguageOverride.js";
 import type { McpInputSchemaProfile } from "./mcpInputSchemaProfile.js";
 
 export interface AppConfig {
+  readonly managedDecodeBudgetBytes?: number;
   readonly mcpMaxResponseBytes?: number;
   readonly mcpInputSchemaProfile?: McpInputSchemaProfile;
   readonly analysisProvider: AnalysisProviderSelector;

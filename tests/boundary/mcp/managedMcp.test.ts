@@ -23,6 +23,61 @@ import { buildManagedPeFixture } from "../../../src/dotnet/ManagedPe.fixture.js"
 
 type ManagedOutputAssertion = Awaited<ReturnType<typeof createOutputAssertion>>;
 
+it("uses the MCP server's selected managed decode capacity", async () => {
+  const directory = await createTestTempDirectory("rea-managed-budget-mcp-");
+  const path = join(directory, "fixture.dll");
+  await writeFile(path, buildManagedPeFixture());
+  const session = composeBinarySession(new AnalysisProviderRegistry([]), [
+    new ManagedStaticProvider(),
+  ]);
+  const server = createServer(
+    { kind: "session", session },
+    {
+      environment: {
+        REA_MANAGED_DECODE_BUDGET_BYTES: "16",
+        REA_ANALYSIS_PROVIDER: "invalid-native-selector",
+      },
+      availabilityPolicy: () => ({
+        processCaptureEnabled: false,
+        investigationInputRoots: 0,
+        browserObservationEnabled: false,
+        electronObservationEnabled: false,
+      }),
+    },
+  );
+  const client = new Client({ name: "managed-budget-mcp", version: "1.0.0" });
+  const [clientTransport, serverTransport] =
+    InMemoryTransport.createLinkedPair();
+  try {
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    for (const name of [
+      "inspect_managed_artifact",
+      "inspect_managed_members",
+      "inspect_managed_native_boundaries",
+    ]) {
+      expect(
+        structured(await client.callTool({ name, arguments: { path } })),
+      ).toMatchObject({
+        normalized_result: {
+          coverage: {
+            issues: [
+              {
+                code: "resource-limit",
+                detail:
+                  "Managed metadata exceeds the 16 byte representation budget",
+              },
+            ],
+          },
+        },
+      });
+    }
+  } finally {
+    await Promise.all([client.close(), server.close()]);
+    await session.close();
+  }
+}, 30_000);
+
 it("runs every managed static inspection independently of an active native target", async () => {
   const directory = await createTestTempDirectory(
     "rea-managed-independent-mcp-",

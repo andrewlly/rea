@@ -577,6 +577,7 @@ describe("managed implementation classification", () => {
     const result = inspectManagedArtifactBytes(
       bytes,
       managedPeFixtureTarget(bytes),
+      64 * 1024 * 1024,
     );
     expect(result.classification).toMatchObject({
       status: "managed",

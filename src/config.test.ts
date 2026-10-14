@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseConfig } from "./config/parseConfig.js";
 import { projectAnalysisError } from "./domain/analysisErrorProjection.js";
+import { parseManagedDecodeBudget } from "./config/managedDecodeBudget.js";
 
 it("reports a configuration failure for a NUL in Hopper loader arguments", () => {
   const result = parseConfig({
@@ -16,6 +17,53 @@ it("reports a configuration failure for a NUL in Hopper loader arguments", () =>
 });
 
 describe("runtime configuration", () => {
+  it("parses managed capacity once and leaves its heap default to the decoder", () => {
+    const empty = parseConfig({});
+    if (!empty.ok) throw empty.error;
+    expect(empty.value.managedDecodeBudgetBytes).toBeUndefined();
+    for (const bytes of [
+      1,
+      64 * 1024 * 1024,
+      1024 * 1024 * 1024,
+      Number.MAX_SAFE_INTEGER,
+    ]) {
+      expect(parseManagedDecodeBudget(String(bytes))).toEqual({
+        ok: true,
+        value: bytes,
+      });
+      expect(
+        parseConfig({ REA_MANAGED_DECODE_BUDGET_BYTES: String(bytes) }),
+      ).toMatchObject({ ok: true, value: { managedDecodeBudgetBytes: bytes } });
+    }
+    for (const value of [
+      "",
+      "0",
+      "-1",
+      "1.5",
+      "NaN",
+      "Infinity",
+      "1e9",
+      "0x100",
+      " 1",
+      "1 ",
+      "01",
+      "9007199254740992",
+    ]) {
+      for (const result of [
+        parseManagedDecodeBudget(value),
+        parseConfig({ REA_MANAGED_DECODE_BUDGET_BYTES: value }),
+      ]) {
+        expect(result.ok).toBe(false);
+        if (result.ok) throw new Error("Expected invalid capacity");
+        expect(result.error.settings.length).toBeGreaterThan(0);
+        expect(
+          result.error.settings.every(
+            ({ setting }) => setting === "REA_MANAGED_DECODE_BUDGET_BYTES",
+          ),
+        ).toBe(true);
+      }
+    }
+  });
   it("allows target-free startup and applies runtime defaults", () => {
     const empty = parseConfig({});
     expect(empty.ok).toBe(true);

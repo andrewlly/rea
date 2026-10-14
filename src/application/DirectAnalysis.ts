@@ -141,14 +141,21 @@ export const runProviderAnalysis = async (
 
 /** Execute managed metadata inspection in an isolated managed-only session. */
 export const runManagedProviderExecution = async (
-  dependencies: Pick<DirectAnalysisDependencies, "createManagedBinarySession">,
+  dependencies: Pick<
+    DirectAnalysisDependencies,
+    "createManagedBinarySession" | "readManagedDecodeBudget"
+  >,
   path: string,
   tool: ManagedToolName,
   signal?: AbortSignal,
   parameters: Readonly<Record<string, JsonValue>> = {},
 ): Promise<Result<AnalysisExecution, AnalysisError>> =>
   withProcessCancellation(signal, async (operationSignal) => {
-    const session = await dependencies.createManagedBinarySession();
+    const budget = dependencies.readManagedDecodeBudget?.();
+    if (budget !== undefined && !budget.ok) return budget;
+    const session = await dependencies.createManagedBinarySession(
+      budget?.value,
+    );
     return withSessionCleanup(
       session,
       async () => {

@@ -1,4 +1,5 @@
 import { parseConfig } from "../../src/config/parseConfig.js";
+import { parseManagedDecodeBudget } from "../../src/config/managedDecodeBudget.js";
 import { ok as resultOk } from "../../src/domain/result.js";
 import { describe, expect, it } from "vitest";
 import {
@@ -40,6 +41,25 @@ const recordingFactories = (failure?: Error) => {
 };
 
 describe("one-shot analysis factory boundary", () => {
+  it("rejects invalid managed capacity before constructing or acquiring a session", async () => {
+    const result = await runManagedProviderExecution(
+      {
+        readManagedDecodeBudget: () => parseManagedDecodeBudget("0"),
+        createManagedBinarySession: () => {
+          throw new Error("Invalid configuration must not construct a session");
+        },
+      },
+      "missing.dll",
+      "inspect_managed_members",
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        _tag: "ConfigurationError",
+        settings: [{ setting: "REA_MANAGED_DECODE_BUDGET_BYTES" }],
+      },
+    });
+  });
   it("preserves thrown failures while releasing clients and cancellation listeners", async () => {
     const [path] = await createBinarySessionTargets();
     const failure = new Error("fixture execution failed");

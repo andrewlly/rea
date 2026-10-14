@@ -1,10 +1,8 @@
 import { createHash } from "node:crypto";
+import { getHeapStatistics } from "node:v8";
 
 import type { ManagedMetadataLayout } from "./ManagedMetadataLayout.js";
 import { managedFailure } from "./ManagedReaderFailure.js";
-
-/** Per-inspection capacity for eagerly retained metadata and its JSON projection. */
-const MAX_METADATA_REPRESENTATION_BYTES = 64 * 1024 * 1024;
 
 interface CachedString {
   readonly value: string;
@@ -13,11 +11,22 @@ interface CachedString {
 
 /** The layout owns decoding capacity and heap identity for all of its consumers. */
 export class ManagedDecodeBudget {
-  #remaining = MAX_METADATA_REPRESENTATION_BYTES;
+  #remaining: number;
   #transient = 0;
   readonly #rows = new Map<number, Set<number>>();
   readonly #strings = new Map<number, CachedString>();
   readonly #digests = new WeakMap<ArrayBufferLike, Map<string, string>>();
+
+  /** Accounting capacity is per inspection, not a bound on total process memory. */
+  constructor(
+    readonly capacityBytes: number = getHeapStatistics().heap_size_limit,
+  ) {
+    if (!Number.isSafeInteger(capacityBytes) || capacityBytes < 1)
+      throw new RangeError(
+        "Managed decode capacity must be a positive safe integer in bytes",
+      );
+    this.#remaining = capacityBytes;
+  }
 
   reserve(bytes: number, offset: number | null): void {
     this.#admit(bytes, offset);
@@ -56,7 +65,7 @@ export class ManagedDecodeBudget {
       throw managedFailure(
         "resource-limit",
         "metadata.representation",
-        `Managed metadata exceeds the ${String(MAX_METADATA_REPRESENTATION_BYTES)} byte representation budget`,
+        `Managed metadata exceeds the ${String(this.capacityBytes)} byte representation budget`,
         offset,
       );
   }

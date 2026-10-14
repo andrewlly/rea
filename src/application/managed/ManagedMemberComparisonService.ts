@@ -45,6 +45,7 @@ export const compareManagedMembersEvidenceValidated = (
 };
 
 interface ManagedMemberComparisonPathDependencies {
+  readonly capacityBytes: number;
   readonly resolveTarget: typeof parseBinaryTarget;
   readonly readSnapshot: typeof readManagedSnapshot;
 }
@@ -96,6 +97,9 @@ export const compareManagedMemberPaths = async (
       // decode budget on them.
       const inspection = inspectManagedMembersBytes(snapshot.bytes, target, {
         userStrings: false,
+        ...(dependencies.capacityBytes === undefined
+          ? {}
+          : { capacityBytes: dependencies.capacityBytes }),
       });
       const evidence = createEvidence(target, MANAGED_STATIC_PROVIDER, {
         operation: "inspect_managed_members",

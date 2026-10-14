@@ -17,16 +17,18 @@ import type { Logger } from "pino";
 import type { CliInstance } from "./types.js";
 import { registerProjectManagedApplicationGraph } from "./managedProjectGraphCommand.js";
 import { managedMembersInputSchema } from "../contracts/managed/managedToolContracts.js";
+import { parseManagedDecodeBudget } from "../config/managedDecodeBudget.js";
 
 export const registerManagedCommands = (
   cli: CliInstance,
   logger: Logger,
   runProviderAnalysis: DirectAnalysis["runProviderAnalysis"],
+  environment: Readonly<NodeJS.ProcessEnv> = {},
 ): void => {
   registerInspectManagedArtifact(cli, logger, runProviderAnalysis);
   registerInspectManagedMembers(cli, logger, runProviderAnalysis);
   registerInspectManagedNativeBoundaries(cli, logger, runProviderAnalysis);
-  registerCompareManagedMembers(cli, logger);
+  registerCompareManagedMembers(cli, logger, environment);
   registerImportManagedReconstruction(cli, logger);
   registerVerifyManagedNativeBoundaries(cli, logger);
   registerProjectManagedApplicationGraph(cli, logger);
@@ -108,20 +110,29 @@ const compareManagedMemberArgs = z.object({
 const registerCompareManagedMembers = (
   cli: CliInstance,
   logger: Logger,
+  environment: Readonly<NodeJS.ProcessEnv>,
 ): void => {
+  const budget = parseManagedDecodeBudget(
+    environment.REA_MANAGED_DECODE_BUDGET_BYTES,
+  );
   cli.command(CLI_COMMANDS.compareManagedMembers, {
     description:
       "Compare managed PE/CLI member inventories by exact declared type, name, and signature; names alone never form a match",
     args: compareManagedMemberArgs,
     run: ({ args }) =>
       logCliCommand(logger, "compare-managed-members", async () => {
+        if (!budget.ok)
+          return {
+            error: "Managed member comparison failed",
+            ...projectAnalysisError(budget.error),
+          };
         const resources = new ArtifactResourceScope();
         const result = await compareManagedMemberPaths(
           {
             leftPath: args.leftPath,
             rightPath: args.rightPath,
           },
-          {},
+          budget.value === undefined ? {} : { capacityBytes: budget.value },
           resources,
         );
         try {

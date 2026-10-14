@@ -99,6 +99,7 @@ const readMemberInventory = (
   bytes: Buffer,
   pe: ManagedPeLayout,
   issues: ManagedParseIssue[],
+  capacityBytes: number | undefined,
 ) => {
   const cli = pe.cli;
   if (cli === null)
@@ -112,6 +113,7 @@ const readMemberInventory = (
     bytes,
     rootOffset,
     cli.metadata.size,
+    capacityBytes,
   );
   const inventory = readManagedMetadataInventory(
     bytes,
@@ -161,9 +163,11 @@ export const inspectManagedMembersBytes = (
   {
     typeNames,
     userStrings: readUserStrings = true,
+    capacityBytes,
   }: {
     readonly typeNames?: readonly string[];
     readonly userStrings?: boolean;
+    readonly capacityBytes?: number;
   } = {},
 ): ManagedMemberInspection => {
   const pe = readManagedPeLayout(bytes);
@@ -171,7 +175,12 @@ export const inspectManagedMembersBytes = (
     return unavailable(target, bytes, pe.cliIssue, typeNames);
   const issues: ManagedParseIssue[] = [];
   try {
-    const { layout, inventory } = readMemberInventory(bytes, pe, issues);
+    const { layout, inventory } = readMemberInventory(
+      bytes,
+      pe,
+      issues,
+      capacityBytes,
+    );
     appendManagedParseIssues(issues, inventory.issues);
     const ranges = typeRanges(bytes, layout, issues);
     const {

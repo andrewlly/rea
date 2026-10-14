@@ -62,6 +62,9 @@ export const parseConfig = (
       }),
     );
   return ok({
+    ...(env.REA_MANAGED_DECODE_BUDGET_BYTES === undefined
+      ? {}
+      : { managedDecodeBudgetBytes: env.REA_MANAGED_DECODE_BUDGET_BYTES }),
     ...(env.REA_MCP_MAX_RESPONSE_BYTES === undefined
       ? {}
       : { mcpMaxResponseBytes: env.REA_MCP_MAX_RESPONSE_BYTES }),

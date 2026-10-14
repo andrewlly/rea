@@ -25,6 +25,41 @@ import { RegularFileCleanupFailure } from "../../../../src/application/RegularFi
 import { projectAnalysisError } from "../../../../src/domain/analysisErrorProjection.js";
 import * as boundedFileBytes from "../../../../src/process/BoundedFileBytes.js";
 
+it("passes one configured capacity to every managed static inspection", async () => {
+  const directory = await createTestTempDirectory(
+    "rea-managed-decode-capacity-",
+  );
+  const path = join(directory, "fixture.dll");
+  await writeFile(path, buildManagedPeFixture());
+  const target = await parseBinaryTarget(path);
+  if (!target.ok) throw target.error;
+  const client = new ManagedStaticProvider(16).createClient(target.value);
+  try {
+    for (const operation of [
+      "inspect_managed_artifact",
+      "inspect_managed_members",
+      "inspect_managed_native_boundaries",
+    ] as const) {
+      const result = await client.execute(operation, {});
+      if (!result.ok) throw result.error;
+      expect(result.value.result).toMatchObject({
+        coverage: {
+          issues: [
+            {
+              code: "resource-limit",
+              scope: "metadata.representation",
+              detail:
+                "Managed metadata exceeds the 16 byte representation budget",
+            },
+          ],
+        },
+      });
+    }
+  } finally {
+    expect(await client.close()).toEqual({ ok: true, value: null });
+  }
+});
+
 describe("managed static snapshot capacity failure", () => {
   it("preserves a typed capacity failure when closing the admitted file also fails", async () => {
     const directory = await createTestTempDirectory(

@@ -19,6 +19,7 @@ type AuxiliaryProviderDeclaration = ConstructorParameters<
 export const auxiliaryAnalysisProviderDeclarations = (
   selectedEnvironment: Readonly<NodeJS.ProcessEnv>,
   platform: NodeJS.Platform = process.platform,
+  managedDecodeBudgetBytes?: number,
 ): readonly AuxiliaryProviderDeclaration[] => {
   const environment = snapshotEnvironment(selectedEnvironment, platform);
   return [
@@ -46,7 +47,7 @@ export const auxiliaryAnalysisProviderDeclarations = (
       load: async () => {
         const { ManagedStaticProvider } =
           await import("../dotnet/ManagedStaticProvider.js");
-        return new ManagedStaticProvider();
+        return new ManagedStaticProvider(managedDecodeBudgetBytes);
       },
     },
   ];
