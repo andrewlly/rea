@@ -33,6 +33,10 @@ export const createDirectAnalysis = (
       const { createManagedBinarySession } = await import("./binary.js");
       return createManagedBinarySession(capacityBytes);
     },
+    createArtifactBinarySession: async () => {
+      const { createArtifactBinarySession } = await import("./binary.js");
+      return createArtifactBinarySession(environment);
+    },
   };
   const runDirectAnalysis: BoundOperation<
     DirectAnalysisRuntime["runDirectAnalysis"]

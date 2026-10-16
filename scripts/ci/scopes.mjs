@@ -3,6 +3,7 @@
 // every workflow.
 export const SCOPES = {
   reverse_tools: [
+    ".github/workflows/mutation.yml",
     "src/application/reverse/**",
     "src/application/binary/BinarySession.ts",
     "src/cutter/**",
@@ -23,6 +24,7 @@ export const SCOPES = {
     "tests/composition/analysis-sessions/binarySession.test.ts",
     "tests/boundary/filesystem/directAnalysisSnapshotReplay.test.ts",
     "tests/boundary/filesystem/reverseToolsMutationConfig.test.ts",
+    "tests/boundary/filesystem/mutationWorkflow.test.ts",
     "src/server/registerRizinDebugTools.ts",
     "tests/boundary/providers/CutterBridge*.test.ts",
     "tests/boundary/providers/cutterBridgeProducer.test.ts",
@@ -79,6 +81,7 @@ export const SCOPES = {
     "tests/boundary/cli/nativeSignatureCli.test.ts",
     "tests/boundary/mcp/nativeSignatureTargetBindingMcp.test.ts",
     "src/process/capture/FilesystemSnapshot.test.ts",
+    "tests/process-global/filesystemSnapshotFallbackCancellation.test.ts",
     "tests/boundary/process/darwinProcessRunTokenReader.test.ts",
     "tests/boundary/process/directAnalysisSignals.test.ts",
     "tests/boundary/process/processCaptureLifecycle.test.ts",
@@ -89,6 +92,9 @@ export const SCOPES = {
   package: [
     "src/windows/**",
     "native/windows/**",
+    "src/process/capture/FilesystemSnapshot.ts",
+    "src/process/capture/FilesystemSnapshot.test.ts",
+    "tests/process-global/filesystemSnapshotFallbackCancellation.test.ts",
     "src/inspector/**",
     "scripts/verify/inspector/**",
     "scripts/verify-package.mjs",
