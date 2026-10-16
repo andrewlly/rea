@@ -253,6 +253,7 @@ describe("Ghidra raw-binary profile", () => {
           compiler_spec_id: "default",
           language_selection: "caller-supplied-v1",
           entry_point: "0x8000000",
+          instruction_references: "exact-address-incoming-v2",
         },
       },
     });
