@@ -1,6 +1,9 @@
 import type { EvidenceMcpServer } from "./EvidenceMcpServer.js";
 import type { AnalysisOperationPort } from "../application/AnalysisProvider.js";
-import { MANAGED_TOOL_CONTRACTS } from "../contracts/managed/managedToolContracts.js";
+import {
+  isManagedToolName,
+  MANAGED_TOOL_CONTRACTS,
+} from "../contracts/managed/managedToolContracts.js";
 import { AnalysisInputError } from "../domain/analysisErrorCore.js";
 import { err } from "../domain/result.js";
 import { registerEvidenceTools } from "./registerEvidenceTools.js";
@@ -10,7 +13,6 @@ import {
   withoutDeliveryDetail,
   type EvidenceToolFamilyOptions,
 } from "./retainedSummaryDelivery.js";
-import { isManagedToolName } from "../contracts/managed/managedToolContracts.js";
 
 /** Operations whose MCP delivery may be a retained summary view. */
 const SUMMARY_DELIVERY: ReadonlySet<string> = new Set([
